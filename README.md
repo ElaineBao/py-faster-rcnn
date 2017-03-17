@@ -33,7 +33,7 @@ I use the training data from ILSVRC 2015, and arrange the data folder structure 
 >>>>>|---train
 >>>>>>|---ILSVRC2013_train
 >>>>>>>|---n04272054
->>>>>>>>|---n04272054_*.xml
+>>>>>>>>|---n04272054_xx.xml
 >>>>>>>>|---...
 >>>>>>|---...
 >>>>>|---val
@@ -42,7 +42,7 @@ I use the training data from ILSVRC 2015, and arrange the data folder structure 
 >>>>>|---train
 >>>>>>|---ILSVRC2013_train
 >>>>>>>|---n04272054
->>>>>>>>|---n04272054_*.JPEG
+>>>>>>>>|---n04272054_xx.JPEG
 >>>>>>>>|---...
 >>>>>>|---...
 >>>>>|---val
