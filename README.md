@@ -24,38 +24,9 @@ Again the original py-faster-rcnn only provides prototxt for pascal_voc / coco d
 
 1. first, download the training data and imagenet devkit  
 
-I use the training data from ILSVRC 2015, and arrange the data folder structure as follows:
+I use the training data from ILSVRC 2015, and arrange the data folder structure as follows:  
 
->|---ILSVRC
->>|---DET
->>>|---Annotations
->>>>|---DET
->>>>>|---train
->>>>>>|---ILSVRC2013_train
->>>>>>>|---n04272054
->>>>>>>>|---n04272054_xx.xml
->>>>>>>>|---...
->>>>>>|---...
->>>>>|---val
->>>|---Data
->>>>|---DET
->>>>>|---train
->>>>>>|---ILSVRC2013_train
->>>>>>>|---n04272054
->>>>>>>>|---n04272054_xx.JPEG
->>>>>>>>|---...
->>>>>>|---...
->>>>>|---val
->>>|---ImageSets
->>>>|---DET
->>>>>|---train_1.txt
->>>>>|---train_2.txt
->>>>>|---...
->>>>>|---train_200.txt
->>>>>|---val.txt
->>|---devkit
->>>|---data
->>>>|---map_det.txt
+![image](https://github.com/ElaineBao/py-faster-rcnn/blob/master/imgs/data_folder_structure.jpg)
 
 
 2. Download pre-trained ImageNet models
