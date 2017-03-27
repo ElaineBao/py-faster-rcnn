@@ -108,8 +108,7 @@ class imagenet(imdb):
             assert os.path.exists(image_set_file), \
                     'Path does not exist: {}'.format(image_set_file)
             with open(image_set_file) as f:
-                for x in f.readlines():  ## only use positive training samples
-                    image_index = [x.split(' ')[0] for x in f.readlines()]
+                image_index = [x.split(' ')[0] for x in f.readlines()]
         
         return image_index
 
