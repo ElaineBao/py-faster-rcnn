@@ -16,7 +16,7 @@ import utils.cython_bbox
 import cPickle
 import subprocess
 import uuid
-from voc_eval import voc_eval
+from imagenet_eval import ILSVRC_eval
 from fast_rcnn.config import cfg
 
 class imagenet(imdb):
@@ -69,6 +69,7 @@ class imagenet(imdb):
         """
         Return the absolute path to image i in the image sequence.
         """
+        #print i, self._image_index[i]
         return self.image_path_from_index(self._image_index[i])
 
     def image_path_from_index(self, index):
@@ -96,14 +97,19 @@ class imagenet(imdb):
                 assert os.path.exists(i_image_set_file), \
                     'Path does not exist: {}'.format(i_image_set_file)
                 with open(i_image_set_file) as f:
-                    image_index.extend([x.split(' ')[0] for x in f.readlines()])
+                    for x in f.readlines():  ## only use positive training samples
+                        image_name, flag = x.split(' ')
+                        if flag.strip() == '1' and self._image_ratio_check(image_name) == True:
+                            # print image_name
+                            image_index.extend([image_name])
         else:
             image_set_file = os.path.join(self._DET_path, 'ImageSets', 'DET',\
                                           self._image_set + '.txt')
             assert os.path.exists(image_set_file), \
                     'Path does not exist: {}'.format(image_set_file)
             with open(image_set_file) as f:
-                image_index = [x.strip() for x in f.readlines()]
+                for x in f.readlines():  ## only use positive training samples
+                    image_index = [x.split(' ')[0] for x in f.readlines()]
         
         return image_index
 
@@ -167,10 +173,10 @@ class imagenet(imdb):
         for ix, obj in enumerate(objs):
             bbox = obj.find('bndbox')
             # Make pixel indexes 0-based
-            x1 = float(bbox.find('xmin').text) - 1
-            y1 = float(bbox.find('ymin').text) - 1
-            x2 = float(bbox.find('xmax').text) - 1
-            y2 = float(bbox.find('ymax').text) - 1
+            x1 = float(bbox.find('xmin').text)
+            y1 = float(bbox.find('ymin').text)
+            x2 = float(bbox.find('xmax').text)
+            y2 = float(bbox.find('ymax').text)
             cls = self._class_to_ind[obj.find('name').text.lower().strip()]
             boxes[ix, :] = [x1, y1, x2, y2]
             gt_classes[ix] = cls
@@ -184,6 +190,135 @@ class imagenet(imdb):
                 'gt_overlaps' : overlaps,
                 'flipped' : False,
                 'seg_areas' : seg_areas}
+
+
+    def _image_ratio_check(self, index, image_ratio=[0.462,6.868],bbox_ratio=[0.117,15.5]):
+        """
+        if the image or bounding boxes are too large or too small,
+        they need to be removed.
+        """
+        filename = os.path.join(self._DET_path, 'Annotations', 'DET', self._image_set, index + '.xml')
+        tree = ET.parse(filename)
+
+        size = tree.find('size')
+        width = float(size.find('width').text)
+        height = float(size.find('height').text)
+        if width/height<image_ratio[0] or width/height>image_ratio[1]:
+            return False
+
+        objs = tree.findall('object')
+        # Load object bounding boxes into a data frame.
+        for obj in objs:
+            bbox = obj.find('bndbox')
+            # Make pixel indexes 0-based
+            x1 = float(bbox.find('xmin').text)
+            y1 = float(bbox.find('ymin').text)
+            x2 = float(bbox.find('xmax').text)
+            y2 = float(bbox.find('ymax').text)
+            if y2-y1<=0 or (x2-x1)/(y2-y1)<bbox_ratio[0] or (x2-x1)/(y2-y1)>bbox_ratio[1]:
+                return False
+
+        return True
+
+
+
+    def _get_comp_id(self):
+        comp_id = (self._comp_id + '_' + self._salt if self.config['use_salt']
+            else self._comp_id)
+        return comp_id
+
+
+    def competition_mode(self, on):
+        if on:
+            self.config['use_salt'] = False
+            self.config['cleanup'] = False
+        else:
+            self.config['use_salt'] = True
+            self.config['cleanup'] = True
+
+
+    def _write_ILSVRC_results_file(self, all_boxes):
+        for cls_ind, cls in enumerate(self._classes):
+            if cls == '__background__':
+                continue
+            print 'Writing {} ILSVRC results file'.format(cls)
+            filename = self._get_ILSVRC_results_file_template().format(cls)
+            with open(filename, 'wt') as f:
+                for im_ind, index in enumerate(self._image_index):
+                    dets = all_boxes[cls_ind][im_ind]
+                    if dets == []:
+                        continue
+                    # the VOCdevkit expects 1-based indices
+                    for k in xrange(dets.shape[0]):
+                        f.write('{:s} {:.3f} {:.1f} {:.1f} {:.1f} {:.1f}\n'.
+                                format(index, dets[k, -1],
+                                       dets[k, 0] + 1, dets[k, 1] + 1,
+                                       dets[k, 2] + 1, dets[k, 3] + 1))
+
+
+    def _get_ILSVRC_results_file_template(self):
+        # /disk2/data/ILSVRC2015/output/detResult/<comp_id>_det_test_aeroplane.txt
+        filename = self._get_comp_id() + '_det_' + self._image_set + '_{:s}.txt'
+        resultdir = os.path.join(self._ILSVRC_path,'output','detResult')
+        if not os.path.isdir(resultdir):
+            os.mkdir(resultdir)
+        path = os.path.join(
+            resultdir,
+            filename)
+        return path
+
+
+    def _do_python_eval(self, output_dir = 'output'):
+        annopath = os.path.join(
+            self._DET_path,
+            'Annotations',
+            'DET',
+            self._image_set,
+            '{:s}.xml')
+        imagesetfile = os.path.join(
+            self._DET_path,
+            'ImageSets',
+            'DET',
+            self._image_set + '.txt')
+        cachedir = os.path.join(self._DET_path, 'annotations_cache')
+        aps = []
+        if not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
+        for i, cls in enumerate(self._classes):
+            if cls == '__background__':
+                continue
+            filename = self._get_ILSVRC_results_file_template().format(cls)
+            rec, prec, ap = ILSVRC_eval(
+                filename, annopath, imagesetfile, cls, cachedir, ovthresh=0.5)
+            aps += [ap]
+            print('AP for {} = {:.4f}'.format(cls, ap))
+            with open(os.path.join(output_dir, cls + '_pr.pkl'), 'w') as f:
+                cPickle.dump({'rec': rec, 'prec': prec, 'ap': ap}, f)
+        print('Mean AP = {:.4f}'.format(np.mean(aps)))
+        print('~~~~~~~~')
+        print('Results:')
+        for ap in aps:
+            print('{:.3f}'.format(ap))
+        print('{:.3f}'.format(np.mean(aps)))
+        print('~~~~~~~~')
+        print('')
+        print('--------------------------------------------------------------')
+        print('Results computed with the **unofficial** Python eval code.')
+        print('Results should be very close to the official MATLAB eval code.')
+        print('Recompute with `./tools/reval.py --matlab ...` for your paper.')
+        print('-- Thanks, The Management')
+        print('--------------------------------------------------------------')
+
+
+    def evaluate_detections(self, all_boxes, output_dir):
+        self._write_ILSVRC_results_file(all_boxes)
+        self._do_python_eval(output_dir)
+        if self.config['cleanup']:
+            for cls in self._classes:
+                if cls == '__background__':
+                    continue
+                filename = self._get_ILSVRC_results_file_template().format(cls)
+                os.remove(filename)
 
 
 if __name__ == '__main__':
