@@ -20,7 +20,9 @@ Again the original py-faster-rcnn only provides prototxt for pascal_voc / coco d
 
 4. **$FRCN_ROOT/experiments/scripts/faster_rcnn_end2end.sh**: add imagenet train shell command.
 
-### To train with imagenet
+5. **$FRCN_ROOT/tools/demo_imagenet.py**: add imagenet detection demo.
+
+### To train and test with imagenet
 
 1. first, download the training data and imagenet devkit  
 
@@ -63,6 +65,15 @@ cd $FRCN_ROOT
 # DATASET is imagenet, or you can also use pascal voc, coco dataset.
 # --set ... allows you to specify fast_rcnn.config options, e.g.
 ```
+
+### To detect with the model
+1. 	Modify the model location
+in tools/demo_imagenet.py, modify the location of test prototxt and caffemodel.
+
+```shell
+python tools/demo_imagenet.py
+```
+
 
 
 For other issues, please visit the original [py-faster-rcnn](https://github.com/rbgirshick/py-faster-rcnn).
