@@ -22,6 +22,8 @@ Again the original py-faster-rcnn only provides prototxt for pascal_voc / coco d
 
 5. **$FRCN_ROOT/tools/demo_imagenet.py**: add imagenet detection demo.
 
+6. **$FRCN_ROOT/lib/datasets/imagenet_eval.py**: add imagenet evaluation.
+
 ### To train and test with imagenet
 
 1. first, download the training data and imagenet devkit  
