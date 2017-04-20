@@ -126,6 +126,8 @@ def ILSVRC_eval(detfile,
     # sort by confidence
     sorted_ind = np.argsort(-confidence)
     sorted_scores = np.sort(-confidence)
+    if len(sorted_ind)==0:
+        return 0,0,0
     BB = BB[sorted_ind, :]
     image_ids = [image_ids[x] for x in sorted_ind]
 
